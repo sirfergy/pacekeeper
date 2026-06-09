@@ -69,6 +69,30 @@ This is a native Home Assistant integration (in [`custom_components/pacekeeper`]
 
 Reconnection is handled automatically: when the treadmill is switched off it goes *unavailable*, and the integration reconnects through the proxy as soon as it advertises again.
 
+### Troubleshooting: the treadmill isn't discovered
+
+The integration only discovers **connectable** devices. A Bluetooth proxy in **passive** mode forwards advertisements but won't allow connections, so the treadmill never appears as something you can add. If discovery comes up empty, this is the most common cause.
+
+Edit the proxy in the ESPHome dashboard (*Settings → Add-ons → ESPHome Device Builder → your proxy → Edit*) and make sure both of these are present and `true`, then **Install → Wirelessly (OTA)**:
+
+```yaml
+esp32_ble_tracker:
+  scan_parameters:
+    active: true        # active scanning — richer adverts, helps discovery
+
+bluetooth_proxy:
+  active: true          # active CONNECTIONS — this is what lets Home Assistant reach the treadmill
+```
+
+`bluetooth_proxy: active: true` is the one that matters for control. On current ESPHome it defaults to `true`; older "scanner-only" proxy firmware is passive. If your config pulls in a ready-made `packages:` block, just append the two blocks above to override it.
+
+Still not showing up? Check, in order:
+
+* **The treadmill must be advertising.** If it's connected to the PitPat phone app (or any other device), it won't advertise — force-close that app / disconnect first.
+* **Range.** Keep the proxy within a few meters of the treadmill; BLE is short-range.
+* **Connection slots.** A proxy exposes `connection_slots` (default `3`). If that many devices are already connected through it, there's no slot left for the treadmill.
+* **Quickest reset.** Re-flash the official connectable proxy from <https://esphome.io/projects/?type=bluetooth> — the standard "Bluetooth Proxy" build is active by default.
+
 ## Option B — ESP32 firmware bridge (MQTT)
 
 This is the original approach: a dedicated ESP32 flashed with this firmware connects directly to the treadmill and bridges it to Home Assistant over MQTT. Choose this if you don't have a Bluetooth proxy (or local adapter) reachable from Home Assistant.
