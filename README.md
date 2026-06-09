@@ -27,7 +27,17 @@ This is a native Home Assistant integration (in [`custom_components/pacekeeper`]
   * an **ESP32 Bluetooth proxy** running [ESPHome's `bluetooth_proxy`](https://esphome.io/components/bluetooth_proxy.html) in **active** mode.
 
 > [!IMPORTANT]
-> The proxy must be in **active** mode. The default ESPHome `bluetooth-proxy` blueprint is passive (scan-only) and can only *discover* the treadmill, not control it. Set `bluetooth_proxy: { active: true }` (and `esp32_ble_tracker: { scan_parameters: { active: true } }`) on the proxy so Home Assistant can open outgoing connections through it.
+> The proxy needs **active connections** enabled so Home Assistant can *connect* to the treadmill, not just *discover* it. Current ESPHome enables this by default (`bluetooth_proxy: active: true`); older scanner-only proxies do not. If the treadmill is never found, edit the proxy in the ESPHome dashboard and make sure it has:
+>
+> ```yaml
+> esp32_ble_tracker:
+>   scan_parameters:
+>     active: true
+> bluetooth_proxy:
+>   active: true
+> ```
+>
+> then **Install** (OTA) to re-flash it.
 
 ### Installation
 
