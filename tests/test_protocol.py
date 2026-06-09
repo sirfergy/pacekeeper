@@ -184,27 +184,28 @@ def test_parse_state_imperial_flag() -> None:
     assert data.imperial is True
 
 
-def test_parse_state_imperial_converts_to_metric() -> None:
-    # An imperial treadmill reports mph / miles; the decoder normalizes to
-    # km/h / km. 1.864 mph ~= 3.0 km/h, 1.0 mile ~= 1.609 km.
+def test_parse_state_imperial_does_not_rescale() -> None:
+    # The treadmill reports km/h / km over BLE even when its panel is set to
+    # mph/miles; Home Assistant converts to the user's unit system for display,
+    # so the decoder must NOT rescale based on the imperial flag.
     packet = _build_state_packet(
-        current_speed=1864,  # 1.864 mph
-        target_speed=1864,
-        distance=1000,  # 1.0 mile
+        current_speed=3000,  # 3.0 km/h
+        target_speed=3000,
+        distance=1000,  # 1.0 km
         steps=0,
         calories=0,
         duration_ms=0,
         fw=1,
-        flags=0x80 | 0x08,  # imperial + running
-        max_speed=3728,  # 3.728 mph
+        flags=0x80 | 0x08,  # imperial panel + running
+        max_speed=6000,
     )
     data = parse_state(packet)
     assert data is not None
     assert data.imperial is True
-    assert abs(data.speed_feedback - 3.0) < 0.01
-    assert abs(data.speed_cmd - 3.0) < 0.01
-    assert abs(data.speed_max - 6.0) < 0.01
-    assert abs(data.distance_km - 1.609344) < 0.001
+    assert abs(data.speed_feedback - 3.0) < 0.001
+    assert abs(data.speed_cmd - 3.0) < 0.001
+    assert abs(data.speed_max - 6.0) < 0.001
+    assert abs(data.distance_km - 1.0) < 0.001
 
 
 def test_parse_state_metric_not_converted() -> None:
@@ -224,6 +225,7 @@ def test_parse_state_metric_not_converted() -> None:
     assert data.imperial is False
     assert abs(data.speed_feedback - 3.0) < 0.001
     assert abs(data.distance_km - 1.0) < 0.001
+
 
 
 

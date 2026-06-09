@@ -67,7 +67,7 @@ This is a native Home Assistant integration (in [`custom_components/pacekeeper`]
 | Start / Pause-Resume / Stop | `button` | Belt controls. |
 | Max speed, Firmware | `sensor` (diagnostic) | Reported by the treadmill. |
 
-**Units.** The integration reads the treadmill in whatever unit its own panel is set to (km/h or mph) and normalizes internally, then presents speed and distance in **your Home Assistant unit system** (Settings → System → General). So a treadmill panel in mph and a metric Home Assistant will agree on the same physical speed, just shown in different units.
+**Units.** The treadmill reports speed and distance in metric (km/h, km) over Bluetooth, regardless of what its own panel displays. Home Assistant shows them in **your unit system** (Settings → System → General) via the entities' device classes, and the Speed slider follows the same unit system. So an mph-panel treadmill and a US Home Assistant will agree: set the slider to 2.0 and both read 2.0 mph.
 
 Reconnection is handled automatically: when the treadmill is switched off it goes *unavailable*, and the integration reconnects through the proxy as soon as it advertises again.
 
