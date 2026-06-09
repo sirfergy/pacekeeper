@@ -17,11 +17,9 @@ sys.path.insert(
     os.path.join(os.path.dirname(__file__), "..", "custom_components", "pacekeeper"),
 )
 
-import protocol  # noqa: E402
 from protocol import (  # noqa: E402
     Command,
     Status,
-    build_command,
     pause_command,
     parse_state,
     set_speed_command,
@@ -232,7 +230,7 @@ def test_parse_state_metric_not_converted() -> None:
 def test_parse_state_rejects_short_packets() -> None:
     assert parse_state(b"") is None
     assert parse_state(bytes(30)) is None
-    assert parse_state(None) is None  # type: ignore[arg-type]
+    assert parse_state(None) is None
 
 
 def _run() -> int:
@@ -241,9 +239,12 @@ def _run() -> int:
     for test in tests:
         try:
             test()
-        except AssertionError as err:  # noqa: PERF203
+        except AssertionError as err:
             failures += 1
             print(f"FAIL {test.__name__}: {err}")
+        except Exception as err:  # noqa: BLE001 - report, don't abort the run
+            failures += 1
+            print(f"ERROR {test.__name__}: {type(err).__name__}: {err}")
         else:
             print(f"ok   {test.__name__}")
     print(f"\n{len(tests) - failures}/{len(tests)} passed")

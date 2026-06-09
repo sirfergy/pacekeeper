@@ -9,7 +9,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
 
 from . import PaceKeeperConfigEntry
-from .const import MAX_SPEED_KMH, SPEED_STEP_KMH, STOP_THRESHOLD_KMH
+from .const import MAX_SPEED_KMH, STOP_THRESHOLD_KMH
 from .entity import PaceKeeperEntity
 from .protocol import KMH_PER_MPH, Status
 
@@ -60,7 +60,10 @@ class PaceKeeperSpeedNumber(PaceKeeperEntity, NumberEntity):
 
         self._attr_native_min_value = 0.0
         self._attr_native_max_value = round(MAX_SPEED_KMH / self._native_to_kmh, 1)
-        self._attr_native_step = SPEED_STEP_KMH
+        # 0.1 in the *displayed* unit, intentionally matching the treadmill
+        # panel's own 0.1-mph / 0.1-km/h resolution (the km/h command itself is
+        # finer-grained, so there is no fixed protocol step to preserve).
+        self._attr_native_step = 0.1
 
     @callback
     def _handle_coordinator_update(self) -> None:

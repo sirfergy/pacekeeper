@@ -132,11 +132,11 @@ def stop_command() -> bytes:
     return build_command(Command.STOP, 0)
 
 
-def parse_state(payload: bytes) -> TreadmillData | None:
+def parse_state(payload: bytes | None) -> TreadmillData | None:
     """Decode a state notification into :class:`TreadmillData`.
 
-    Returns ``None`` for packets that are too short to be valid, mirroring the
-    firmware which discards anything shorter than 31 bytes.
+    Returns ``None`` for missing packets or packets that are too short to be
+    valid, mirroring the firmware which discards anything shorter than 31 bytes.
     """
     if payload is None or len(payload) < MIN_STATE_PACKET_LENGTH:
         return None

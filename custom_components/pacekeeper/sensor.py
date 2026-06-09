@@ -23,7 +23,7 @@ from homeassistant.helpers.typing import StateType
 
 from . import PaceKeeperConfigEntry
 from .entity import PaceKeeperEntity
-from .protocol import STATUS_STR, Status, TreadmillData
+from .protocol import STATUS_STR, TreadmillData
 
 STATE_OPTIONS = [
     "countdown",
