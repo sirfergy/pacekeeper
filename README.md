@@ -1,6 +1,9 @@
 # Homebrain PaceKeeper for WalkingPads in Home Assistant
 
-PaceKeeper is an ESP32 bridge that connects via Bluetooth to your WalkingPad and exposes the device via MQTT to Home Assistant.
+PaceKeeper connects to your WalkingPad over Bluetooth and exposes it in Home Assistant. There are two ways to run it:
+
+* **Home Assistant integration (recommended if you have a Bluetooth proxy).** A native integration that talks to the treadmill over Home Assistant's own Bluetooth stack. The connection is automatically routed through whatever adapter can reach the treadmill — including an **ESP32 Bluetooth proxy** running ESPHome in *active* mode. No dedicated board to flash, no MQTT. See [Option A](#option-a--home-assistant-integration-bluetooth-proxy--no-extra-hardware).
+* **ESP32 firmware bridge.** Flash a dedicated ESP32 with this firmware; it connects directly to the treadmill and bridges it to Home Assistant over MQTT. See [Option B](#option-b--esp32-firmware-bridge-mqtt).
 
 ![Home Assistant PaceKeeper Device](doc/ha_device.png)
 
@@ -12,14 +15,62 @@ See the video on Youtube:
 
 * PitPat-T01 Treadmill – Superun BA06-B1 [[AliExpress](https://s.click.aliexpress.com/e/_c3V1ssrv)]
 
-## Required Tools
+## Option A — Home Assistant integration (Bluetooth proxy / no extra hardware)
+
+This is a native Home Assistant integration (in [`custom_components/pacekeeper`](custom_components/pacekeeper)). It talks to the treadmill over Home Assistant's own Bluetooth stack, so the connection is transparently routed through whichever adapter can reach it — a USB/onboard Bluetooth adapter **or an ESP32 Bluetooth proxy**. You don't flash anything treadmill-specific and you don't need MQTT.
+
+### Requirements
+
+* Home Assistant **2024.12** or newer with the [Bluetooth integration](https://www.home-assistant.io/integrations/bluetooth/) set up.
+* A way for Home Assistant to *connect* to the treadmill:
+  * a local Bluetooth adapter within range, **or**
+  * an **ESP32 Bluetooth proxy** running [ESPHome's `bluetooth_proxy`](https://esphome.io/components/bluetooth_proxy.html) in **active** mode.
+
+> [!IMPORTANT]
+> The proxy must be in **active** mode. The default ESPHome `bluetooth-proxy` blueprint is passive (scan-only) and can only *discover* the treadmill, not control it. Set `bluetooth_proxy: { active: true }` (and `esp32_ble_tracker: { scan_parameters: { active: true } }`) on the proxy so Home Assistant can open outgoing connections through it.
+
+### Installation
+
+**Via HACS (custom repository):**
+
+1. HACS → ⋮ → *Custom repositories* → add `https://github.com/peteh/pacekeeper`, category **Integration**.
+2. Install **PaceKeeper Treadmill**, then restart Home Assistant.
+
+**Manually:**
+
+1. Copy the [`custom_components/pacekeeper`](custom_components/pacekeeper) folder into your Home Assistant `config/custom_components/` directory.
+2. Restart Home Assistant.
+
+### Setup
+
+* Power the treadmill on (see [Cloud Free Usage](#cloud-free-usage--start-without-wifi-app-and-cloud-account) if it's still locked). If it is in range of an active adapter/proxy, Home Assistant auto-discovers it and a **PaceKeeper Treadmill** card appears under *Settings → Devices & Services*.
+* Otherwise add it manually: *Settings → Devices & Services → Add Integration → PaceKeeper Treadmill*, then pick the treadmill from the list.
+
+### Entities
+
+| Entity | Type | Notes |
+| --- | --- | --- |
+| Speed | `number` (slider, 0–6 km/h) | Sets target speed; starts the belt. Setting it to 0 stops the belt. |
+| Speed | `sensor` | Current belt speed. |
+| State | `sensor` | `countdown` / `running` / `paused` / `stopped` / `disconnected`. |
+| Distance, Duration, Calories | `sensor` | Workout totals. |
+| Start / Pause-Resume / Stop | `button` | Belt controls. |
+| Max speed, Firmware | `sensor` (diagnostic) | Reported by the treadmill. |
+
+Reconnection is handled automatically: when the treadmill is switched off it goes *unavailable*, and the integration reconnects through the proxy as soon as it advertises again.
+
+## Option B — ESP32 firmware bridge (MQTT)
+
+This is the original approach: a dedicated ESP32 flashed with this firmware connects directly to the treadmill and bridges it to Home Assistant over MQTT. Choose this if you don't have a Bluetooth proxy (or local adapter) reachable from Home Assistant.
+
+### Required Tools
 
 * ESP32 – I'm using a Wemos S3 Mini, but any ESP32 with Bluetooth should do [[AliExpress](https://de.aliexpress.com/item/1005006646247867.html)] [[Amazon](https://amzn.to/44VolhQ)]
 * VS Code with PlatformIO
 
-## Setup
+### Setup
 
-### Find the Bluetooth Address of the Device
+#### Find the Bluetooth Address of the Device
 
 Get an app like **nRF Connect** – this app allows you to view Bluetooth connections on your phone.
 
@@ -29,12 +80,12 @@ Get an app like **nRF Connect** – this app allows you to view Bluetooth connec
 * The device should show up as `PitPat-T01`
 * Write down the Bluetooth address (it should look like `AA:BB:CC:11:22`)
 
-### Preparation of Home Assistant for MQTT
+#### Preparation of Home Assistant for MQTT
 
 * Add the MQTT integration and follow the setup steps:  
   <https://www.home-assistant.io/integrations/mqtt>
 
-### Project Compilation
+#### Project Compilation
 
 * Set up VS Code with PlatformIO  
   (<https://docs.platformio.org/en/latest/integration/ide/vscode.html#installation>)

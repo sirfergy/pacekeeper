@@ -4,3 +4,11 @@
 .vscode/launch.json
 .vscode/ipch
 config.h
+
+# Python / Home Assistant integration
+__pycache__/
+*.py[cod]
+.venv*/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
