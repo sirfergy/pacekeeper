@@ -93,6 +93,14 @@ Still not showing up? Check, in order:
 * **Connection slots.** A proxy exposes `connection_slots` (default `3`). If that many devices are already connected through it, there's no slot left for the treadmill.
 * **Quickest reset.** Re-flash the official connectable proxy from <https://esphome.io/projects/?type=bluetooth> — the standard "Bluetooth Proxy" build is active by default.
 
+### Troubleshooting: discovered, but connections fail (status 133)
+
+If the treadmill is discovered but the integration stays unavailable, and the proxy logs show repeated `Connection open error, status=133` followed by the treadmill no longer advertising (`last advertisement ...s ago` keeps growing), something else is holding the treadmill's **single** BLE connection — these controllers accept exactly one central and stop advertising while connected (or after a wedged connect attempt).
+
+1. **Force-close the PitPat app** on every phone that has it (or disable that phone's Bluetooth to test). The app auto-connects as soon as the treadmill powers on and wins the race against Home Assistant.
+2. **Power-cycle the treadmill** at the hardware switch (off, wait ~10 s, on).
+3. Wait for it to reconnect — when the treadmill advertises again, Home Assistant automatically retries the integration (or press **Reload** on the integration to hurry it along).
+
 ## Option B — ESP32 firmware bridge (MQTT)
 
 This is the original approach: a dedicated ESP32 flashed with this firmware connects directly to the treadmill and bridges it to Home Assistant over MQTT. Choose this if you don't have a Bluetooth proxy (or local adapter) reachable from Home Assistant.
