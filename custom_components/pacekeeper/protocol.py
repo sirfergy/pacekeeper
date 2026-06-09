@@ -23,6 +23,9 @@ DEFAULT_WEIGHT = 80
 # A state notification is at least this many bytes before we trust it.
 MIN_STATE_PACKET_LENGTH = 31
 
+# Exact kilometers per mile, used to normalize imperial telemetry to metric.
+KMH_PER_MPH = 1.609344
+
 
 class Command(IntEnum):
     """Command byte values understood by the treadmill."""
@@ -155,12 +158,18 @@ def parse_state(payload: bytes) -> TreadmillData | None:
         0x10: Status.PAUSED,
     }.get(state_bits, Status.STOPPED)
 
+    # The treadmill reports speed and distance in whatever unit its own panel is
+    # set to: km/h + km when metric, mph + miles when imperial. Normalize to
+    # metric here so the decoded data has a single, well-defined unit; the Home
+    # Assistant entities then re-display it in the user's preferred unit system.
+    unit_factor = KMH_PER_MPH if imperial else 1.0
+
     return TreadmillData(
         status=status,
-        speed_cmd=target_speed / 1000.0,
-        speed_feedback=current_speed / 1000.0,
-        speed_max=max_speed / 1000.0,
-        distance_km=distance / 1000.0,
+        speed_cmd=target_speed / 1000.0 * unit_factor,
+        speed_feedback=current_speed / 1000.0 * unit_factor,
+        speed_max=max_speed / 1000.0 * unit_factor,
+        distance_km=distance / 1000.0 * unit_factor,
         calories=calories,
         steps=steps,
         duration_sec=duration_ms // 1000,

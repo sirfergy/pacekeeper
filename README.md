@@ -60,12 +60,14 @@ This is a native Home Assistant integration (in [`custom_components/pacekeeper`]
 
 | Entity | Type | Notes |
 | --- | --- | --- |
-| Speed | `number` (slider, 0–6 km/h) | Sets target speed; starts the belt. Setting it to 0 stops the belt. |
+| Speed | `number` (slider) | Sets target speed and starts the belt; set it to 0 to stop. The slider *holds* the value you set rather than following the treadmill's gradual ramp — watch the Speed **sensor** for the live belt speed. |
 | Speed | `sensor` | Current belt speed. |
 | State | `sensor` | `countdown` / `running` / `paused` / `stopped` / `disconnected`. |
 | Distance, Duration, Calories | `sensor` | Workout totals. |
 | Start / Pause-Resume / Stop | `button` | Belt controls. |
 | Max speed, Firmware | `sensor` (diagnostic) | Reported by the treadmill. |
+
+**Units.** The integration reads the treadmill in whatever unit its own panel is set to (km/h or mph) and normalizes internally, then presents speed and distance in **your Home Assistant unit system** (Settings → System → General). So a treadmill panel in mph and a metric Home Assistant will agree on the same physical speed, just shown in different units.
 
 Reconnection is handled automatically: when the treadmill is switched off it goes *unavailable*, and the integration reconnects through the proxy as soon as it advertises again.
 

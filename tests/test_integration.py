@@ -26,6 +26,11 @@ from pytest_homeassistant_custom_component.common import (  # noqa: E402
     MockConfigEntry,
 )
 
+from homeassistant.util.unit_system import (  # noqa: E402
+    METRIC_SYSTEM,
+    US_CUSTOMARY_SYSTEM,
+)
+
 from custom_components.pacekeeper.const import DOMAIN, SERVICE_PAD_UUID  # noqa: E402
 from custom_components.pacekeeper.pacekeeper import PaceKeeperTreadmill  # noqa: E402
 from custom_components.pacekeeper.protocol import Status, TreadmillData  # noqa: E402
@@ -99,6 +104,7 @@ async def test_setup_creates_entities_and_unloads(hass: HomeAssistant) -> None:
         data={CONF_ADDRESS: ADDRESS},
     )
     entry.add_to_hass(hass)
+    hass.config.units = METRIC_SYSTEM
 
     fake_device = MagicMock()
     fake_device.address = ADDRESS
@@ -168,6 +174,7 @@ async def test_number_set_value_sends_commands(hass: HomeAssistant) -> None:
         data={CONF_ADDRESS: ADDRESS},
     )
     entry.add_to_hass(hass)
+    hass.config.units = METRIC_SYSTEM
 
     fake_device = MagicMock()
     fake_device.address = ADDRESS
@@ -218,3 +225,61 @@ async def test_number_set_value_sends_commands(hass: HomeAssistant) -> None:
             blocking=True,
         )
         stop.assert_awaited_once()
+
+
+async def test_number_imperial_unit_and_conversion(hass: HomeAssistant) -> None:
+    """On a US system the slider is in mph and converts input back to km/h."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id=ADDRESS,
+        title="PaceKeeper Treadmill",
+        data={CONF_ADDRESS: ADDRESS},
+    )
+    entry.add_to_hass(hass)
+    hass.config.units = US_CUSTOMARY_SYSTEM
+
+    fake_device = MagicMock()
+    fake_device.address = ADDRESS
+    fake_device.name = "PitPat-T01"
+
+    async def fake_connect(self: PaceKeeperTreadmill) -> None:
+        self._connected = True
+        self._client = MagicMock(is_connected=True)
+        self._data = TreadmillData(status=Status.RUNNING)
+
+    set_speed = AsyncMock()
+
+    with (
+        patch(
+            "custom_components.pacekeeper.bluetooth.async_ble_device_from_address",
+            return_value=fake_device,
+        ),
+        patch(
+            "custom_components.pacekeeper.bluetooth.async_register_callback",
+            return_value=lambda: None,
+        ),
+        patch.object(PaceKeeperTreadmill, "async_ensure_connected", fake_connect),
+        patch.object(PaceKeeperTreadmill, "async_shutdown", new=AsyncMock()),
+        patch.object(PaceKeeperTreadmill, "async_set_speed", new=set_speed),
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+        ent_reg = er.async_get(hass)
+        speed_entity_id = ent_reg.async_get_entity_id(
+            "number", DOMAIN, f"{ADDRESS}_speed"
+        )
+        state = hass.states.get(speed_entity_id)
+        assert state.attributes["unit_of_measurement"] == "mph"
+
+        # Setting 1.9 mph should command ~3.058 km/h -> 3058 thousandths.
+        await hass.services.async_call(
+            "number",
+            "set_value",
+            {"entity_id": speed_entity_id, "value": 1.9},
+            blocking=True,
+        )
+        set_speed.assert_awaited_once()
+        sent = set_speed.await_args.args[0]
+        assert abs(sent - 3058) <= 2
+
